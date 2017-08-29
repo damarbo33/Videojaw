@@ -37,24 +37,19 @@
       </toolsSet>
       <compileType>
         <cTool>
-          <standard>10</standard>
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
             <pElem>../../ExternalLibs/SDL/libs/include</pElem>
           </incDir>
-          <commandLine>-fpermissive</commandLine>
-          <warningLevel>0</warningLevel>
         </cTool>
         <ccTool>
-          <standard>8</standard>
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
             <pElem>../../ExternalLibs/SDL/libs/include</pElem>
           </incDir>
           <commandLine>-fpermissive</commandLine>
-          <warningLevel>0</warningLevel>
         </ccTool>
         <linkerTool>
           <linkerAddLib>

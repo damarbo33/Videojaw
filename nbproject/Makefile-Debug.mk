@@ -40,11 +40,11 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-fpermissive
+CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-fpermissive
-CXXFLAGS=-fpermissive
+CCFLAGS=
+CXXFLAGS=
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -66,12 +66,12 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 ${OBJECTDIR}/cmdutils.o: cmdutils.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -w -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -std=c11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
+	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
 
 ${OBJECTDIR}/ffplay.o: ffplay.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -w -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -std=c11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
+	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
 
 # Subprojects
 .build-subprojects:
