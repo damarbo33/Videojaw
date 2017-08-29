@@ -45,3 +45,7 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+#Ficheros del proyecto generados por netbeans
+build
+dist
