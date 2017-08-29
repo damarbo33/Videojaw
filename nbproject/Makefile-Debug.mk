@@ -35,7 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/tutorial07.o
+	${OBJECTDIR}/cmdutils.o \
+	${OBJECTDIR}/ffplay.o
 
 
 # C Compiler Flags
@@ -52,7 +53,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -L../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/lib -L../../ExternalLibs/SDL/libs/lib/x64 -L../../ExternalLibs/SDL/libs/lib -lmingw32 -lSDLmain -lSDL -lavutil -lavformat -lavcodec -lswscale -lz -lm
+LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -L../../ExternalLibs/SDL2-2.0.5/i686-w64-mingw32/lib -lmingw32 -lSDL2main -lSDL2 -lavutil -lavformat -lavcodec -lswscale -lswresample -lz -lm
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -60,12 +61,17 @@ LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -L../../ExternalLibs/SDL2-2.0.5/x8
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/tutorial07.o: tutorial07.cpp
+${OBJECTDIR}/cmdutils.o: cmdutils.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -w -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tutorial07.o tutorial07.cpp
+	$(COMPILE.c) -g -w -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -std=c11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
+
+${OBJECTDIR}/ffplay.o: ffplay.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -w -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -std=c11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
 
 # Subprojects
 .build-subprojects:

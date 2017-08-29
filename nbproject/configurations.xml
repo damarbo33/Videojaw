@@ -12,7 +12,8 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>tutorial07.cpp</itemPath>
+      <itemPath>cmdutils.c</itemPath>
+      <itemPath>ffplay.c</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -36,6 +37,7 @@
       </toolsSet>
       <compileType>
         <cTool>
+          <standard>10</standard>
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
@@ -45,6 +47,7 @@
           <warningLevel>0</warningLevel>
         </cTool>
         <ccTool>
+          <standard>8</standard>
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
@@ -56,17 +59,17 @@
         <linkerTool>
           <linkerAddLib>
             <pElem>../../ExternalLibs/ffmpeg/lib</pElem>
-            <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/lib</pElem>
-            <pElem>../../ExternalLibs/SDL/libs/lib/x64</pElem>
-            <pElem>../../ExternalLibs/SDL/libs/lib</pElem>
+            <pElem>../../ExternalLibs/SDL2-2.0.5/i686-w64-mingw32/lib</pElem>
           </linkerAddLib>
           <linkerLibItems>
-            <linkerOptionItem>-lmingw32 -lSDLmain -lSDL</linkerOptionItem>
-            <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lz -lm</linkerOptionItem>
+            <linkerOptionItem>-lmingw32 -lSDL2main -lSDL2</linkerOptionItem>
+            <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lswresample -lz -lm</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="tutorial07.cpp" ex="false" tool="1" flavor2="0">
+      <item path="cmdutils.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="ffplay.c" ex="false" tool="0" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -103,7 +106,9 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="tutorial07.cpp" ex="false" tool="1" flavor2="0">
+      <item path="cmdutils.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="ffplay.c" ex="false" tool="0" flavor2="0">
       </item>
     </conf>
   </confs>

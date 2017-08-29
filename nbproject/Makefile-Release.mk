@@ -35,7 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/tutorial07.o
+	${OBJECTDIR}/cmdutils.o \
+	${OBJECTDIR}/ffplay.o
 
 
 # C Compiler Flags
@@ -60,12 +61,17 @@ LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -lavformat -lavcodec -lavutil
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/tutorial07.o: tutorial07.cpp
+${OBJECTDIR}/cmdutils.o: cmdutils.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I../../ExternalLibs/ffmpeg/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tutorial07.o tutorial07.cpp
+	$(COMPILE.c) -O2 -I../../ExternalLibs/ffmpeg/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
+
+${OBJECTDIR}/ffplay.o: ffplay.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -I../../ExternalLibs/ffmpeg/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
 
 # Subprojects
 .build-subprojects:
