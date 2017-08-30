@@ -2510,7 +2510,10 @@ static int audio_open(void *opaque, int64_t wanted_channel_layout, int wanted_nb
     wanted_spec.samples = FFMAX(SDL_AUDIO_MIN_BUFFER_SIZE, 2 << av_log2(wanted_spec.freq / SDL_AUDIO_MAX_CALLBACKS_PER_SEC));
     wanted_spec.callback = sdl_audio_callback;
     wanted_spec.userdata = opaque;
+    
+    //Error in SDL if we don't close the audio first
     while (SDL_OpenAudio(&wanted_spec, &spec) < 0) {
+        SDL_CloseAudio();
         av_log(NULL, AV_LOG_WARNING, "SDL_OpenAudio (%d channels, %d Hz): %s\n",
                wanted_spec.channels, wanted_spec.freq, SDL_GetError());
         wanted_spec.channels = next_nb_channels[FFMIN(7, wanted_spec.channels)];
@@ -3711,8 +3714,6 @@ int main(int argc, char **argv)
     show_banner(argc, argv, options);
 
     parse_options(NULL, argc, argv, options, opt_input_file);
-    //av_strlcpy(input_filename, "C:\\clips\\Clip_480i_5sec_6mbps_new.mpg", sizeof(input_filename));
-    
 
     if (!input_filename) {
         show_usage();
@@ -3731,8 +3732,9 @@ int main(int argc, char **argv)
     else {
         /* Try to work around an occasional ALSA buffer underflow issue when the
          * period size is NPOT due to ALSA resampling by forcing the buffer size. */
-        if (!SDL_getenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE"))
-            SDL_setenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE","1", 1);
+//        if (!SDL_getenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE"))
+//            SDL_setenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE","1", 1);
+        //printf("AUDIO ENABLED\n");
     }
     if (display_disable)
         flags &= ~SDL_INIT_VIDEO;
@@ -3741,6 +3743,20 @@ int main(int argc, char **argv)
         av_log(NULL, AV_LOG_FATAL, "(Did you set the DISPLAY variable?)\n");
         exit(1);
     }
+    
+    SDL_AudioSpec wanted_spec, spec;
+    wanted_spec.channels = 1;
+    wanted_spec.freq = 44100;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.silence = 0;
+    wanted_spec.samples = 2048;
+    wanted_spec.callback = NULL;
+    wanted_spec.userdata = NULL;
+    
+    if (SDL_OpenAudio(&wanted_spec, &spec) >= 0) {
+        SDL_CloseAudio();
+    }
+    
 
     SDL_EventState(SDL_SYSWMEVENT, SDL_IGNORE);
     SDL_EventState(SDL_USEREVENT, SDL_IGNORE);

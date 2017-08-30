@@ -21,7 +21,7 @@ FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=MinGW64-Windows
+CND_PLATFORM=MinGW_64-Windows
 CND_DLIB_EXT=dll
 CND_CONF=Debug
 CND_DISTDIR=dist
@@ -53,7 +53,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -L../../ExternalLibs/SDL2-2.0.5/i686-w64-mingw32/lib -lmingw32 -lSDL2main -lSDL2 -lavutil -lavformat -lavcodec -lswscale -lswresample -lz -lm
+LDLIBSOPTIONS=-L../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/lib -L../../ExternalLibs/ffmpeg/lib -lmingw32 -lSDL2main -lSDL2 -lavutil -lavformat -lavcodec -lswscale -lswresample
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -66,12 +66,12 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 ${OBJECTDIR}/cmdutils.o: cmdutils.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
+	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
 
 ${OBJECTDIR}/ffplay.o: ffplay.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -I../../ExternalLibs/SDL/libs/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
+	$(COMPILE.c) -g -I../../ExternalLibs/ffmpeg/include -I../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
 
 # Subprojects
 .build-subprojects:

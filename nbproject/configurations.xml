@@ -31,7 +31,7 @@
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
-        <compilerSet>MinGW64|MinGW</compilerSet>
+        <compilerSet>MinGW_64|MinGW</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
@@ -40,25 +40,23 @@
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
-            <pElem>../../ExternalLibs/SDL/libs/include</pElem>
           </incDir>
         </cTool>
         <ccTool>
           <incDir>
             <pElem>../../ExternalLibs/ffmpeg/include</pElem>
             <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/include</pElem>
-            <pElem>../../ExternalLibs/SDL/libs/include</pElem>
           </incDir>
           <commandLine>-fpermissive</commandLine>
         </ccTool>
         <linkerTool>
           <linkerAddLib>
+            <pElem>../../ExternalLibs/SDL2-2.0.5/x86_64-w64-mingw32/lib</pElem>
             <pElem>../../ExternalLibs/ffmpeg/lib</pElem>
-            <pElem>../../ExternalLibs/SDL2-2.0.5/i686-w64-mingw32/lib</pElem>
           </linkerAddLib>
           <linkerLibItems>
             <linkerOptionItem>-lmingw32 -lSDL2main -lSDL2</linkerOptionItem>
-            <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lswresample -lz -lm</linkerOptionItem>
+            <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lswresample</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
       </compileType>

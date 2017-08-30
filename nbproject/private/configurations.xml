@@ -15,6 +15,8 @@
         </gdb_interceptlist>
         <gdb_options>
           <DebugOptions>
+            <option name="symbol_file"
+                    value="${OUTPUT_PATH} D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4"/>
           </DebugOptions>
         </gdb_options>
         <gdb_buildfirst gdb_buildfirst_overriden="false" gdb_buildfirst_old="false"/>
@@ -25,8 +27,10 @@
       <runprofile version="9">
         <runcommandpicklist>
           <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Descargas\Clip_480_5sec_6mbps_h264.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}"</runcommand>
+        <runcommand>"${OUTPUT_PATH}" D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
         <console-type>2</console-type>
