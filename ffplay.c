@@ -47,6 +47,7 @@
 #include "libavcodec/avfft.h"
 #include "libswresample/swresample.h"
 
+    
 #if CONFIG_AVFILTER
 # include "libavfilter/avfilter.h"
 # include "libavfilter/buffersink.h"
@@ -3713,7 +3714,8 @@ int main(int argc, char **argv)
 
     show_banner(argc, argv, options);
 
-    parse_options(NULL, argc, argv, options, opt_input_file);
+    //parse_options(NULL, argc, argv, options, opt_input_file);
+    opt_input_file(NULL, "C:\\clips\\Clip_480_5sec_6mbps_h264.mp4");
 
     if (!input_filename) {
         show_usage();
@@ -3732,9 +3734,8 @@ int main(int argc, char **argv)
     else {
         /* Try to work around an occasional ALSA buffer underflow issue when the
          * period size is NPOT due to ALSA resampling by forcing the buffer size. */
-//        if (!SDL_getenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE"))
-//            SDL_setenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE","1", 1);
-        //printf("AUDIO ENABLED\n");
+        if (!SDL_getenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE"))
+            SDL_setenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE","1", 1);
     }
     if (display_disable)
         flags &= ~SDL_INIT_VIDEO;

@@ -13,10 +13,10 @@
         <gdb_interceptlist>
           <gdbinterceptoptions gdb_all="false" gdb_unhandled="true" gdb_unexpected="true"/>
         </gdb_interceptlist>
+        <gdb_signals>
+        </gdb_signals>
         <gdb_options>
           <DebugOptions>
-            <option name="symbol_file"
-                    value="${OUTPUT_PATH} D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4"/>
           </DebugOptions>
         </gdb_options>
         <gdb_buildfirst gdb_buildfirst_overriden="false" gdb_buildfirst_old="false"/>
@@ -29,11 +29,12 @@
           <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Descargas\Clip_480_5sec_6mbps_h264.mp4</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_480_5sec_6mbps_h264.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\winsatencode.wmv C:\clips\winsatencode.mp4</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}" D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4</runcommand>
+        <runcommand>"${OUTPUT_PATH}" C:\clips\winsatencode.wmv C:\clips\winsatencode.mp4</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
-        <console-type>2</console-type>
         <terminal-type>1</terminal-type>
         <remove-instrumentation>0</remove-instrumentation>
         <environment>

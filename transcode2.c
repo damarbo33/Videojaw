@@ -30,11 +30,14 @@
 
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavfilter/avfiltergraph.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
+
+const char program_name[] = "TRANSCODEME";
+//Buffer for errors added to c++ compatibility
+char buffErrors[AV_ERROR_MAX_STRING_SIZE];
 
 static AVFormatContext *ifmt_ctx;
 static AVFormatContext *ofmt_ctx;
@@ -50,6 +53,18 @@ typedef struct StreamContext {
     AVCodecContext *enc_ctx;
 } StreamContext;
 static StreamContext *stream_ctx;
+
+static void show_usage(void)
+{
+    av_log(NULL, AV_LOG_INFO, "Simple media transcoder\n");
+    av_log(NULL, AV_LOG_INFO, "Usage: %s <input file> <output file>", program_name);
+    av_log(NULL, AV_LOG_INFO, "\n");
+}
+
+void show_help_default(const char *opt, const char *arg)
+{
+    show_usage();
+}
 
 static int open_input_file(const char *filename)
 {
@@ -124,6 +139,14 @@ static int open_output_file(const char *filename)
         av_log(NULL, AV_LOG_ERROR, "Could not create output context\n");
         return AVERROR_UNKNOWN;
     }
+    
+    /* Guess the desired container format based on the file extension. */
+    if (!(ofmt_ctx->oformat = av_guess_format(NULL, filename, NULL))) {
+        av_log(NULL, AV_LOG_ERROR, "Could not find output file format\n");
+            return AVERROR_UNKNOWN;
+    }
+    
+    av_strlcpy(ofmt_ctx->filename, filename, sizeof(ofmt_ctx->filename));
 
 
     for (i = 0; i < ifmt_ctx->nb_streams; i++) {
@@ -139,7 +162,16 @@ static int open_output_file(const char *filename)
         if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO
                 || dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
             /* in this example, we choose transcoding to same codec */
-            encoder = avcodec_find_encoder(dec_ctx->codec_id);
+            //encoder = avcodec_find_encoder(dec_ctx->codec_id);
+
+            if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){
+                encoder = avcodec_find_encoder(ofmt_ctx->oformat->video_codec);
+                //encoder = avcodec_find_encoder(AV_CODEC_ID_VORBIS);
+            } else if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
+                encoder = avcodec_find_encoder(ofmt_ctx->oformat->audio_codec);
+            }
+            
+            
             if (!encoder) {
                 av_log(NULL, AV_LOG_FATAL, "Necessary encoder not found\n");
                 return AVERROR_INVALIDDATA;
@@ -228,8 +260,8 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
 {
     char args[512];
     int ret = 0;
-    AVFilter *buffersrc = NULL;
-    AVFilter *buffersink = NULL;
+    const AVFilter *buffersrc = NULL;
+    const AVFilter *buffersink = NULL;
     AVFilterContext *buffersrc_ctx = NULL;
     AVFilterContext *buffersink_ctx = NULL;
     AVFilterInOut *outputs = avfilter_inout_alloc();
