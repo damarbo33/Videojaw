@@ -2,6 +2,7 @@
  * Copyright (c) 2010 Nicolas George
  * Copyright (c) 2011 Stefano Sabatini
  * Copyright (c) 2014 Andrey Utkin
+ * Copyright (c) 2018 Daniel Marco
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,6 @@
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 
-const char program_name[] = "TRANSCODEME";
 //Buffer for errors added to c++ compatibility
 char buffErrors[AV_ERROR_MAX_STRING_SIZE];
 
@@ -55,31 +55,35 @@ typedef struct StreamContext {
 } StreamContext;
 static StreamContext *stream_ctx;
 
-
+/**
+ * 
+ * @param errbuf
+ * @param errbuf_size
+ * @param errnum
+ * @return 
+ */
 char *av_cplus_make_error_string(char *errbuf, size_t errbuf_size, int errnum)
 {
     av_strerror(errnum, errbuf, errbuf_size);
     return errbuf;
 }
 
+/**
+ * 
+ * @param errnum
+ * @return 
+ */
 char *av_cplus_err2str(int errnum){
     memset(buffErrors, '\0', AV_ERROR_MAX_STRING_SIZE);
     av_cplus_make_error_string(buffErrors, AV_ERROR_MAX_STRING_SIZE, errnum);
     return buffErrors;
 }
 
-static void show_usage(void)
-{
-    av_log(NULL, AV_LOG_INFO, "Simple media transcoder\n");
-    av_log(NULL, AV_LOG_INFO, "Usage: %s <input file> <output file>", program_name);
-    av_log(NULL, AV_LOG_INFO, "\n");
-}
-
-void show_help_default(const char *opt, const char *arg)
-{
-    show_usage();
-}
-
+/**
+ * 
+ * @param filename
+ * @return 
+ */
 static int open_input_file(const char *filename)
 {
     int ret;
@@ -138,6 +142,11 @@ static int open_input_file(const char *filename)
     return 0;
 }
 
+/**
+ * 
+ * @param filename
+ * @return 
+ */
 static int open_output_file(const char *filename)
 {
     AVStream *out_stream;
@@ -277,6 +286,14 @@ static int open_output_file(const char *filename)
     return 0;
 }
 
+/**
+ * 
+ * @param fctx
+ * @param dec_ctx
+ * @param enc_ctx
+ * @param filter_spec
+ * @return 
+ */
 static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
         AVCodecContext *enc_ctx, const char *filter_spec)
 {
@@ -426,6 +443,10 @@ end:
     return ret;
 }
 
+/**
+ * 
+ * @return 
+ */
 static int init_filters(void)
 {
     const char *filter_spec;
@@ -456,6 +477,13 @@ static int init_filters(void)
     return 0;
 }
 
+/**
+ * 
+ * @param filt_frame
+ * @param stream_index
+ * @param got_frame
+ * @return 
+ */
 static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, int *got_frame) {
 
     int ret;
@@ -518,6 +546,12 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
     return ret;
 }
 
+/**
+ * 
+ * @param frame
+ * @param stream_index
+ * @return 
+ */
 static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
 {
     int ret;
@@ -561,7 +595,11 @@ static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
 
     return ret;
 }
-
+/**
+ * 
+ * @param stream_index
+ * @return 
+ */
 static int flush_encoder(unsigned int stream_index)
 {
     int ret;
@@ -582,12 +620,17 @@ static int flush_encoder(unsigned int stream_index)
     return ret;
 }
 
+/**
+ * 
+ * @param argc
+ * @param argv
+ * @return 
+ */
 int main(int argc, char **argv)
 {
     int ret;
     AVPacket packet = { .data = NULL, .size = 0 };
     AVFrame *frame = NULL;
-    enum AVMediaType type;
     unsigned int stream_index;
     unsigned int i;
     int got_frame;
@@ -613,7 +656,7 @@ int main(int argc, char **argv)
         if ((ret = av_read_frame(ifmt_ctx, &packet)) < 0)
             break;
         stream_index = packet.stream_index;
-        type = ifmt_ctx->streams[packet.stream_index]->codecpar->codec_type;
+        
         av_log(NULL, AV_LOG_DEBUG, "Demuxer gave frame of stream_index %u\n",
                 stream_index);
 
@@ -629,6 +672,7 @@ int main(int argc, char **argv)
                                  stream_ctx[stream_index].dec_ctx->time_base);
             
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)  
+            enum AVMediaType type = ifmt_ctx->streams[packet.stream_index]->codecpar->codec_type;
             int (*dec_func)(AVCodecContext *, AVFrame *, int *, const AVPacket *);
             dec_func = (type == AVMEDIA_TYPE_VIDEO) ? avcodec_decode_video2 :
                 avcodec_decode_audio4;
@@ -660,15 +704,12 @@ int main(int argc, char **argv)
             } while(ret == AVERROR(EAGAIN));
 
             if(ret == AVERROR_EOF){
-                //*finished = 1;
                 got_frame = 0;
             }
 
             if(ret == AVERROR(EINVAL)) {
                 // An error or EOF occured,index break out and return what
                 // we have so far.
-        //        printf("AVERROR(EAGAIN): %d, AVERROR_EOF: %d, AVERROR(EINVAL): %d\n", AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL));
-        //        printf("fe_read_frame: EOF or some othere decoding error (%d)!\n", ret);
                 fprintf(stderr, "Could not decode frame (error '%s')\n",
                 av_cplus_err2str(ret));
                 av_packet_unref(&packet);

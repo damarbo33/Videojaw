@@ -35,6 +35,9 @@
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
+        <cTool>
+          <warningLevel>2</warningLevel>
+        </cTool>
         <ccTool>
           <commandLine>-fpermissive</commandLine>
         </ccTool>
