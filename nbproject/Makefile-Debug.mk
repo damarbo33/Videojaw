@@ -35,8 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/cmdutils.o \
-	${OBJECTDIR}/ffplay.o
+	${OBJECTDIR}/transcode2.o
 
 
 # C Compiler Flags
@@ -63,15 +62,10 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/cmdutils.o: cmdutils.c
+${OBJECTDIR}/transcode2.o: transcode2.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -w -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
-
-${OBJECTDIR}/ffplay.o: ffplay.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -g -w -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/transcode2.o transcode2.c
 
 # Subprojects
 .build-subprojects:

@@ -28,6 +28,7 @@
  * @example transcoding.c
  */
 
+#include <libavutil/avstring.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavfilter/buffersink.h>
@@ -53,6 +54,19 @@ typedef struct StreamContext {
     AVCodecContext *enc_ctx;
 } StreamContext;
 static StreamContext *stream_ctx;
+
+
+char *av_cplus_make_error_string(char *errbuf, size_t errbuf_size, int errnum)
+{
+    av_strerror(errnum, errbuf, errbuf_size);
+    return errbuf;
+}
+
+char *av_cplus_err2str(int errnum){
+    memset(buffErrors, '\0', AV_ERROR_MAX_STRING_SIZE);
+    av_cplus_make_error_string(buffErrors, AV_ERROR_MAX_STRING_SIZE, errnum);
+    return buffErrors;
+}
 
 static void show_usage(void)
 {
@@ -145,9 +159,8 @@ static int open_output_file(const char *filename)
         av_log(NULL, AV_LOG_ERROR, "Could not find output file format\n");
             return AVERROR_UNKNOWN;
     }
-    
-    av_strlcpy(ofmt_ctx->filename, filename, sizeof(ofmt_ctx->filename));
 
+    av_strlcpy(ofmt_ctx->filename, filename, sizeof(ofmt_ctx->filename));
 
     for (i = 0; i < ifmt_ctx->nb_streams; i++) {
         out_stream = avformat_new_stream(ofmt_ctx, NULL);
@@ -161,16 +174,18 @@ static int open_output_file(const char *filename)
 
         if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO
                 || dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-            /* in this example, we choose transcoding to same codec */
-            //encoder = avcodec_find_encoder(dec_ctx->codec_id);
-
+            //in this example, we choose transcoding to same codec
+//            encoder = avcodec_find_encoder(dec_ctx->codec_id);
+            
+            //Encoding to the guessed format 
             if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){
                 encoder = avcodec_find_encoder(ofmt_ctx->oformat->video_codec);
-                //encoder = avcodec_find_encoder(AV_CODEC_ID_VORBIS);
+                //encoder = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+                
             } else if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
                 encoder = avcodec_find_encoder(ofmt_ctx->oformat->audio_codec);
+                //encoder = avcodec_find_encoder(AV_CODEC_ID_MP3);
             }
-            
             
             if (!encoder) {
                 av_log(NULL, AV_LOG_FATAL, "Necessary encoder not found\n");
@@ -195,7 +210,13 @@ static int open_output_file(const char *filename)
                 else
                     enc_ctx->pix_fmt = dec_ctx->pix_fmt;
                 /* video time_base can be set to whatever is handy and supported by encoder */
-                enc_ctx->time_base = av_inv_q(dec_ctx->framerate);
+                if (av_q2d(dec_ctx->framerate) <= 0.0 ){
+                   enc_ctx->time_base = av_inv_q(dec_ctx->framerate);
+                } else {
+                   enc_ctx->time_base = dec_ctx->time_base; 
+                   //enc_ctx->time_base = av_make_q(60000,1001);
+                }
+                
             } else {
                 enc_ctx->sample_rate = dec_ctx->sample_rate;
                 enc_ctx->channel_layout = dec_ctx->channel_layout;
@@ -221,6 +242,7 @@ static int open_output_file(const char *filename)
 
             out_stream->time_base = enc_ctx->time_base;
             stream_ctx[i].enc_ctx = enc_ctx;
+            
         } else if (dec_ctx->codec_type == AVMEDIA_TYPE_UNKNOWN) {
             av_log(NULL, AV_LOG_FATAL, "Elementary stream #%d is of unknown type, cannot proceed\n", i);
             return AVERROR_INVALIDDATA;
@@ -435,13 +457,11 @@ static int init_filters(void)
 }
 
 static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, int *got_frame) {
+
     int ret;
     int got_frame_local;
     AVPacket enc_pkt;
-    int (*enc_func)(AVCodecContext *, AVPacket *, const AVFrame *, int *) =
-        (ifmt_ctx->streams[stream_index]->codecpar->codec_type ==
-         AVMEDIA_TYPE_VIDEO) ? avcodec_encode_video2 : avcodec_encode_audio2;
-
+    
     if (!got_frame)
         got_frame = &got_frame_local;
 
@@ -450,11 +470,38 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
     enc_pkt.data = NULL;
     enc_pkt.size = 0;
     av_init_packet(&enc_pkt);
+    
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)  
+    int (*enc_func)(AVCodecContext *, AVPacket *, const AVFrame *, int *) =
+        (ifmt_ctx->streams[stream_index]->codecpar->codec_type ==
+         AVMEDIA_TYPE_VIDEO) ? avcodec_encode_video2 : avcodec_encode_audio2;
+  
     ret = enc_func(stream_ctx[stream_index].enc_ctx, &enc_pkt,
             filt_frame, got_frame);
+#else
+    *got_frame = 0;
+    ret = avcodec_send_frame(stream_ctx[stream_index].enc_ctx, filt_frame);
+    if ( ret != AVERROR_EOF && ret != AVERROR(EAGAIN) && ret != 0){
+        fprintf(stderr, "Could not send frame (error '%s')\n",
+                    av_cplus_err2str(ret));
+        return ret;
+    }
+    
+    if ( (ret = avcodec_receive_packet(stream_ctx[stream_index].enc_ctx, &enc_pkt)) == 0)
+        *got_frame = 1;
+       
+    if ( ret != AVERROR_EOF && ret != AVERROR(EAGAIN) && ret != 0){
+        fprintf(stderr, "Could not receive packet (error '%s')\n",
+                    av_cplus_err2str(ret));
+        return ret;
+    }   
+#endif    
+    
     av_frame_free(&filt_frame);
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)
     if (ret < 0)
         return ret;
+#endif
     if (!(*got_frame))
         return 0;
 
@@ -467,6 +514,7 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
     av_log(NULL, AV_LOG_DEBUG, "Muxing frame\n");
     /* mux encoded frame */
     ret = av_interleaved_write_frame(ofmt_ctx, &enc_pkt);
+    av_packet_unref(&enc_pkt);
     return ret;
 }
 
@@ -504,7 +552,7 @@ static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
             av_frame_free(&filt_frame);
             break;
         }
-
+        
         filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
         ret = encode_write_frame(filt_frame, stream_index, NULL);
         if (ret < 0)
@@ -543,13 +591,13 @@ int main(int argc, char **argv)
     unsigned int stream_index;
     unsigned int i;
     int got_frame;
-    int (*dec_func)(AVCodecContext *, AVFrame *, int *, const AVPacket *);
+    
 
     if (argc != 3) {
         av_log(NULL, AV_LOG_ERROR, "Usage: %s <input file> <output file>\n", argv[0]);
         return 1;
     }
-
+    
     av_register_all();
     avfilter_register_all();
 
@@ -579,8 +627,12 @@ int main(int argc, char **argv)
             av_packet_rescale_ts(&packet,
                                  ifmt_ctx->streams[stream_index]->time_base,
                                  stream_ctx[stream_index].dec_ctx->time_base);
+            
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)  
+            int (*dec_func)(AVCodecContext *, AVFrame *, int *, const AVPacket *);
             dec_func = (type == AVMEDIA_TYPE_VIDEO) ? avcodec_decode_video2 :
                 avcodec_decode_audio4;
+            
             ret = dec_func(stream_ctx[stream_index].dec_ctx, frame,
                     &got_frame, &packet);
             if (ret < 0) {
@@ -588,6 +640,41 @@ int main(int argc, char **argv)
                 av_log(NULL, AV_LOG_ERROR, "Decoding failed\n");
                 break;
             }
+#else
+            int ret;
+            // AVERROR(EAGAIN) means that we need to feed more
+            // That we can decode Frame or Packet
+            do {
+                do {
+                    ret = avcodec_send_packet(stream_ctx[stream_index].dec_ctx, &packet);
+                } while(ret == AVERROR(EAGAIN));
+
+                if(ret == AVERROR_EOF || ret == AVERROR(EINVAL)) {
+                    printf("AVERROR(EAGAIN): %d, AVERROR_EOF: %d, AVERROR(EINVAL): %d\n", AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL));
+                    printf("fe_read_frame: Frame getting error (%d)!\n", ret);
+                    return ret;
+                } else {
+                    got_frame = 1;
+                }
+                ret = avcodec_receive_frame(stream_ctx[stream_index].dec_ctx, frame);
+            } while(ret == AVERROR(EAGAIN));
+
+            if(ret == AVERROR_EOF){
+                //*finished = 1;
+                got_frame = 0;
+            }
+
+            if(ret == AVERROR(EINVAL)) {
+                // An error or EOF occured,index break out and return what
+                // we have so far.
+        //        printf("AVERROR(EAGAIN): %d, AVERROR_EOF: %d, AVERROR(EINVAL): %d\n", AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL));
+        //        printf("fe_read_frame: EOF or some othere decoding error (%d)!\n", ret);
+                fprintf(stderr, "Could not decode frame (error '%s')\n",
+                av_cplus_err2str(ret));
+                av_packet_unref(&packet);
+                return ret;
+            }
+#endif
 
             if (got_frame) {
                 frame->pts = frame->best_effort_timestamp;

@@ -12,8 +12,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>cmdutils.c</itemPath>
-      <itemPath>ffplay.c</itemPath>
+      <itemPath>transcode2.c</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -36,9 +35,6 @@
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
-        <cTool>
-          <warningLevel>0</warningLevel>
-        </cTool>
         <ccTool>
           <commandLine>-fpermissive</commandLine>
         </ccTool>
@@ -49,9 +45,7 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="cmdutils.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="ffplay.c" ex="false" tool="0" flavor2="0">
+      <item path="transcode2.c" ex="false" tool="0" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -88,9 +82,7 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="cmdutils.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="ffplay.c" ex="false" tool="0" flavor2="0">
+      <item path="transcode2.c" ex="false" tool="0" flavor2="0">
       </item>
     </conf>
   </confs>
