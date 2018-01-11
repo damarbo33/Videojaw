@@ -12,7 +12,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>transcode2.c</itemPath>
+      <itemPath>main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -36,19 +36,20 @@
       </toolsSet>
       <compileType>
         <cTool>
-          <warningLevel>2</warningLevel>
+          <warningLevel>0</warningLevel>
         </cTool>
         <ccTool>
           <commandLine>-fpermissive</commandLine>
+          <warningLevel>0</warningLevel>
         </ccTool>
         <linkerTool>
           <linkerLibItems>
-            <linkerOptionItem>-lmingw32 -lSDL2main -lSDL2</linkerOptionItem>
+            <linkerOptionItem>-lsdl_gfx -lmingw32 -lSDLmain -lSDL -lSDL_mixer -lSDL_ttf -lSDL_image -lws2_32 </linkerOptionItem>
             <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lswresample -lavfilter -lswresample</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="transcode2.c" ex="false" tool="0" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -85,7 +86,7 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="transcode2.c" ex="false" tool="0" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>

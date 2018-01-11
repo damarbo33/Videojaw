@@ -1,44 +1,57 @@
 /*
- * Copyright (c) 2010 Nicolas George
- * Copyright (c) 2011 Stefano Sabatini
- * Copyright (c) 2014 Andrey Utkin
- * Copyright (c) 2018 Daniel Marco
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 
-/**
- * @file
- * API example for demuxing, decoding, filtering, encoding and muxing
- * @example transcoding.c
+/* 
+ * File:   main.cpp
+ * Author: dmarcobo
+ *
+ * Created on 11 de enero de 2018, 10:26
  */
 
-#include <libavutil/avstring.h>
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
-#include <libavutil/opt.h>
-#include <libavutil/pixdesc.h>
+#include <cstdlib>
+#include <string>
+#include <array>
+#include <SDL/SDL.h>
+#include <SDL/SDL_ttf.h>
+#include <SDL/SDL_image.h>
+#include <SDL/SDL_rotozoom.h>
+#include <SDL/SDL_mixer.h>
+
+using namespace std;
+
+extern "C"{
+    #include <libavutil/avstring.h>
+    #include <libavutil/imgutils.h>
+    #include <libavcodec/avcodec.h>
+    #include <libavformat/avformat.h>
+    #include <libavfilter/buffersink.h>
+    #include <libavfilter/buffersrc.h>
+    #include <libavutil/opt.h>
+    #include <libavutil/pixdesc.h>
+    #include <libswscale/swscale.h>
+}
 
 //Buffer for errors added to c++ compatibility
 char buffErrors[AV_ERROR_MAX_STRING_SIZE];
+
+// Set up the pixel format color masks for RGB(A) byte arrays.
+// Only STBI_rgb (3) and STBI_rgb_alpha (4) are supported here!
+/* SDL interprets each pixel as a 32-bit number, so our masks must depend
+  on the endianness (byte order) of the machine */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+   static const uint32_t rmask = 0xff000000;
+   static const uint32_t gmask = 0x00ff0000;
+   static const uint32_t bmask = 0x0000ff00;
+   static const uint32_t amask = 0x000000ff;
+#else
+   static const uint32_t rmask = 0x000000ff;
+   static const uint32_t gmask = 0x0000ff00;
+   static const uint32_t bmask = 0x00ff0000;
+   static const uint32_t amask = 0xff000000;
+#endif
 
 static AVFormatContext *ifmt_ctx;
 static AVFormatContext *ofmt_ctx;
@@ -361,11 +374,14 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
         if (!dec_ctx->channel_layout)
             dec_ctx->channel_layout =
                 av_get_default_channel_layout(dec_ctx->channels);
+        
         snprintf(args, sizeof(args),
-                "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
+                //"time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
+                "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%",
                 dec_ctx->time_base.num, dec_ctx->time_base.den, dec_ctx->sample_rate,
                 av_get_sample_fmt_name(dec_ctx->sample_fmt),
                 dec_ctx->channel_layout);
+        
         ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
                 args, NULL, filter_graph);
         if (ret < 0) {
@@ -525,19 +541,14 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
         return ret;
     }   
 #endif    
-    
     av_frame_free(&filt_frame);
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)
     if (ret < 0)
         return ret;
 #endif
-    
-    
     if (!(*got_frame)){
         return 0;
     } 
-    
-        
 
     /* prepare packet for muxing */
     enc_pkt.stream_index = stream_index;
@@ -545,13 +556,38 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
                          stream_ctx[stream_index].enc_ctx->time_base,
                          ofmt_ctx->streams[stream_index]->time_base);
     
-    
-    
     av_log(NULL, AV_LOG_DEBUG, "Muxing frame\n");
     /* mux encoded frame */
     ret = av_interleaved_write_frame(ofmt_ctx, &enc_pkt);
     av_packet_unref(&enc_pkt);
     return ret;
+}
+
+Uint32 getpixel(SDL_Surface *surface, const int x, const int y)
+{
+    //int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * surface->format->BytesPerPixel;
+
+    switch(surface->format->BytesPerPixel) {
+    case 1:
+        return *p;
+
+    case 2:
+        return *(Uint16 *)p;
+
+    case 3:
+        if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
+            return p[0] << 16 | p[1] << 8 | p[2];
+        else
+            return p[0] | p[1] << 8 | p[2] << 16;
+
+    case 4:
+        return *(Uint32 *)p;
+
+    default:
+        return 0;       /* shouldn't happen, but avoids warnings */
+    }
 }
 
 /**
@@ -598,51 +634,82 @@ static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
         filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
         
         static int nframe = 0;
-        av_log(NULL, AV_LOG_INFO, "nframe %d\n", nframe++);
+        av_log(NULL, AV_LOG_INFO, "nframe %d\n", nframe);
         
-//        for (int i=0; i < 30; i++){
-//            for (int j=0; j < 30; j++){
-//                filt_frame->data[i + j * filt_frame->linesize[0]] = 0x00;
+        //Se obtiene la imagen
+#define FRAMEMODIF 0
+        
+#ifdef FRAMEMODIF 
+        int width = filt_frame->width;
+        int height = filt_frame->height;
+        uint8_t* rgb_data[4];  
+        int rgb_linesize[4];
+        
+        //Especificamos el formato y tamanyo de la imagen origen y tambien la de destino
+        SwsContext *sws_ctx = sws_getContext(width, height, filt_frame->format , width, height, 
+                AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+        
+        
+        //Hacemos espacio para la imagen de destino que modificaremos
+        av_image_alloc(rgb_data, rgb_linesize, width, height, AV_PIX_FMT_RGB24, 32); 
+        //Escalamos la imagen en el destino
+        sws_scale(sws_ctx, filt_frame->data, filt_frame->linesize, 0, height, rgb_data, rgb_linesize);
+        // RGB24 is a packed format. It means there is only one plane and all data in it. 
+//        size_t rgb_size = width * height * 3;
+//        uint8_t *rgb_arr = new uint8_t[rgb_size];
+        //std::copy_n(rgb_data[0], rgb_size, rgb_arr);
+        //Do something with the image
+        SDL_Surface* surf = SDL_CreateRGBSurfaceFrom((uint8_t *)rgb_data[0], width, height, 24, width*3,
+                                             rmask, gmask, bmask, amask);
+        
+        SDL_LockSurface(surf);
+        
+        SDL_Rect location = {width / 2 - 60 / 2, height / 2 - 60 / 2, 60, 60};
+        SDL_FillRect(surf, &location, SDL_MapRGB(surf->format, 255,0,0));
+        
+        if (surf == NULL) {
+            av_log(NULL, AV_LOG_INFO, "Creating surface failed %s\n", SDL_GetError());
+            break;
+        } 
+        
+        if (nframe == 10)
+        if (SDL_SaveBMP(surf, "C:\\clips\\ejemplo.bmp") != 0){
+            av_log(NULL, AV_LOG_INFO, "Save bitmap failed %s\n", SDL_GetError());
+        }
+        
+//        Uint8 r,g,b;
+        Uint8 *p;
+//        for (int y=0; y < height; y++){
+//            for (int x=0; x < width; x++){
+//                p=(Uint8 *)surf->pixels + y * surf->pitch + x * surf->format->BytesPerPixel;
+//                //SDL_GetRGB(p, surf->format, &r,&g,&b);
+//               rgb_data[0][(y*width + x)*3] = p[0];     //r
+//               rgb_data[0][(y*width + x)*3 + 1] = p[1]; //g
+//               rgb_data[0][(y*width + x)*3 + 2] = p[2]; //b
 //            }
 //        }
-        uint8_t *tempPtr = NULL;
-        tempPtr = frame->data[0];
+        for (int i=0; i < width * height; i++){
+            p=(Uint8 *)surf->pixels + i*3;
+            rgb_data[0][i*3] = p[0]; //r
+            rgb_data[0][i*3+1] = p[1]; //g
+            rgb_data[0][i*3+2] = p[2]; //b
+        }
         
-        av_log(NULL, AV_LOG_INFO, "frame->linesize[0] %d\n", frame->linesize[0]);
+        //Volvemos a copiar la imagen modificada en el frame de destino
+        //std::copy_n(rgb_arr, rgb_size, rgb_data[0]);
+        SwsContext *sws_ctx2 = sws_getContext(width, height, AV_PIX_FMT_RGB24, width, height, filt_frame->format, SWS_BICUBIC, NULL, NULL, NULL);
+        sws_scale(sws_ctx2, rgb_data, rgb_linesize, 0, height, filt_frame->data, filt_frame->linesize);
+        SDL_UnlockSurface(surf);
+        SDL_FreeSurface(surf);
+#endif        
+        //End do something with the image
+//        delete rgb_arr;
         
-        uint8_t* rgb_data[4];  int rgb_linesize[4];
-        av_image_alloc(rgb_data, rgb_linesize, frame->width, frame->height, AV_PIX_FMT_RGB24, 32); 
-        sws_scale(stream_ctx[0].dec_ctx, frame->data, frame->linesize, 0, frame->height, rgb_data, rgb_linesize);
-
-        // RGB24 is a packed format. It means there is only one plane and all data in it. 
-        size_t rgb_size = frame->width * frame->height * 3;
-        std::array<uint8_t, rgb_size> rgb_arr;
-        std::copy_n(rgb_data[0], rgb_size, rgb_arr);
-        
-        
-        //AVFrame* pic = av_frame_alloc();
-        //avpicture_fill((AVPicture *)pic, frame->data, AV_PIX_FMT_RGB24, stream_ctx[0].dec_ctx->width, stream_ctx[0].dec_ctx->height);
-        //av_frame_free(pic);
-        
-        
-//        for (int y=0; y<stream_ctx[0].dec_ctx->height; ++y) {
-//            for (int x=0; x<stream_ctx[0].dec_ctx->width; ++x) {
-//              uint8_t* rgb = data + ((y*WIDTH + x) *3);
-//              const double i = x/double(WIDTH);
-//          //  const double j = y/double(HEIGHT);
-//              rgb[0] = 255*i;
-//              rgb[1] = 0;
-//              rgb[2] = 255*(1-i);
-//            }
-//          }
-
-        
-                
         ret = encode_write_frame(filt_frame, stream_index, NULL);
+        nframe++;
         if (ret < 0)
             break;
     }
-
     return ret;
 }
 /**
@@ -670,6 +737,9 @@ static int flush_encoder(unsigned int stream_index)
     return ret;
 }
 
+/*
+ * 
+ */
 /**
  * 
  * @param argc
@@ -679,13 +749,17 @@ static int flush_encoder(unsigned int stream_index)
 int main(int argc, char **argv)
 {
     int ret;
-    AVPacket packet = { .data = NULL, .size = 0 };
+    AVPacket packet; 
+    packet.data = NULL;
+    packet.size = 0;
     AVFrame *frame = NULL;
     unsigned int stream_index;
     unsigned int i;
     int got_frame;
     
-
+    SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);			// Initialize SDL
+    SDL_Surface* screen = SDL_SetVideoMode(640, 480, 24, SDL_SWSURFACE|SDL_RESIZABLE);
+    
     if (argc != 3) {
         av_log(NULL, AV_LOG_ERROR, "Usage: %s <input file> <output file>\n", argv[0]);
         return 1;
@@ -826,8 +900,10 @@ end:
         avio_closep(&ofmt_ctx->pb);
     avformat_free_context(ofmt_ctx);
 
-    if (ret < 0)
-        av_log(NULL, AV_LOG_ERROR, "Error occurred: %s\n", av_err2str(ret));
-
+    if (ret < 0){
+        av_log(NULL, AV_LOG_ERROR, "Error occurred\n");
+    }
+    
+    SDL_Quit();
     return ret ? 1 : 0;
 }
