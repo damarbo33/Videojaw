@@ -13,6 +13,9 @@
 
 #include <cstdlib>
 #include <string>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <array>
 #include <algorithm>
 #include <SDL/SDL.h>
@@ -120,7 +123,7 @@ static int open_input_file(const char *filename)
         return ret;
     }
 
-    stream_ctx = av_mallocz_array(ifmt_ctx->nb_streams, sizeof(*stream_ctx));
+    stream_ctx = (StreamContext*) av_mallocz_array(ifmt_ctx->nb_streams, sizeof(*stream_ctx));
     if (!stream_ctx)
         return AVERROR(ENOMEM);
 
@@ -382,13 +385,16 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
             dec_ctx->channel_layout =
                 av_get_default_channel_layout(dec_ctx->channels);
         
+        std::ostringstream stm;
+        stm  << std::hex << std::uppercase << setw(2) << dec_ctx->channel_layout;
+        
         snprintf(args, sizeof(args),
                 //"time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
-                "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%",
+                "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%s",
                 dec_ctx->time_base.num, dec_ctx->time_base.den, dec_ctx->sample_rate,
                 av_get_sample_fmt_name(dec_ctx->sample_fmt),
-                dec_ctx->channel_layout);
-        
+                stm.str().c_str());
+                
         ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
                 args, NULL, filter_graph);
         if (ret < 0) {
@@ -475,7 +481,7 @@ static int init_filters(void)
     const char *filter_spec;
     unsigned int i;
     int ret;
-    filter_ctx = av_malloc_array(ifmt_ctx->nb_streams, sizeof(*filter_ctx));
+    filter_ctx = (FilteringContext*) av_malloc_array(ifmt_ctx->nb_streams, sizeof(*filter_ctx));
     if (!filter_ctx)
         return AVERROR(ENOMEM);
 
@@ -579,7 +585,7 @@ void processFrameInSDL(SDL_Surface *sf){
     int width = sf->w;
     int height = sf->h;
     
-    SDL_Rect location = {width / 2 - 60 / 2, height / 2 - 60 / 2, 60, 60};
+    SDL_Rect location = {(short int)(width / 2 - 60 / 2), (short int)(height / 2 - 60 / 2), 60, 60};
     SDL_FillRect(sf, &location, SDL_MapRGB(sf->format, 255,0,0));
 }
 
@@ -601,9 +607,11 @@ void encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_index){
             uint8_t* rgb_data[4];  
             int rgb_linesize[4];
             //Especificamos el formato y tamanyo de la imagen origen y tambien la de destino
-            sws_ctx = sws_getCachedContext(sws_ctx, width, height, 
-                                            filt_frame->format , width, height, 
-                                            AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+            sws_ctx = sws_getCachedContext(sws_ctx, 
+                                            width, height, stream_ctx[stream_index].dec_ctx->pix_fmt, //Format of img source
+                                            width, height, AV_PIX_FMT_RGB24, //Format of img dest
+                                            SWS_FAST_BILINEAR, NULL, NULL, NULL);
+            
             //Hacemos espacio para la imagen de destino que modificaremos
             av_image_alloc(rgb_data, rgb_linesize, width, height, AV_PIX_FMT_RGB24, 32); 
             //Escalamos la imagen en el destino
@@ -680,7 +688,10 @@ void encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_index){
             
             //Volvemos a copiar la imagen modificada en el frame de destino
             //std::copy_n(rgb_arr, rgb_size, rgb_data[0]);
-            sws_ctx2 = sws_getCachedContext(sws_ctx2, width, height, AV_PIX_FMT_RGB24, width, height, frameMod->format, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+            sws_ctx2 = sws_getCachedContext(sws_ctx2, 
+                            width, height, AV_PIX_FMT_RGB24, 
+                            width, height, stream_ctx[stream_index].enc_ctx->pix_fmt, 
+                            SWS_FAST_BILINEAR, NULL, NULL, NULL);
             sws_scale(sws_ctx2, &rgb_data[0], rgb_linesize, 0, height, frameMod->data, frameMod->linesize);
             av_freep(&rgb_data[0]);
             
@@ -708,9 +719,7 @@ static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
     int ret;
     AVFrame *filt_frame;
     
-    av_log(NULL, AV_LOG_INFO, "Pushing decoded frame to filters\n");
-    
-    
+    //av_log(NULL, AV_LOG_INFO, "Pushing decoded frame to filters\n");
     
     /* push the decoded frame into the filtergraph */
     ret = av_buffersrc_add_frame_flags(filter_ctx[stream_index].buffersrc_ctx,

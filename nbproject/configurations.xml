@@ -36,11 +36,11 @@
       </toolsSet>
       <compileType>
         <cTool>
-          <warningLevel>0</warningLevel>
+          <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
           <commandLine>-fpermissive</commandLine>
-          <warningLevel>0</warningLevel>
+          <warningLevel>2</warningLevel>
         </ccTool>
         <linkerTool>
           <linkerLibItems>
@@ -81,7 +81,7 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="9">
       </item>
     </conf>
   </confs>
