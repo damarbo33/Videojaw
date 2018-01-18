@@ -54,35 +54,30 @@
     </conf>
     <conf name="Release" type="1">
       <toolsSet>
-        <compilerSet>MinGW64|MinGW</compilerSet>
+        <compilerSet>MinGW2_64|MinGW</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
-          <developmentMode>5</developmentMode>
-          <incDir>
-            <pElem>../../ExternalLibs/ffmpeg/include</pElem>
-          </incDir>
+          <developmentMode>6</developmentMode>
+          <warningLevel>0</warningLevel>
         </cTool>
         <ccTool>
-          <developmentMode>5</developmentMode>
-          <incDir>
-            <pElem>../../ExternalLibs/ffmpeg/include</pElem>
-          </incDir>
+          <developmentMode>6</developmentMode>
+          <commandLine>-fpermissive</commandLine>
+          <warningLevel>0</warningLevel>
         </ccTool>
         <fortranCompilerTool>
-          <developmentMode>5</developmentMode>
+          <developmentMode>6</developmentMode>
         </fortranCompilerTool>
         <asmTool>
-          <developmentMode>5</developmentMode>
+          <developmentMode>6</developmentMode>
         </asmTool>
         <linkerTool>
-          <linkerAddLib>
-            <pElem>../../ExternalLibs/ffmpeg/lib</pElem>
-          </linkerAddLib>
           <linkerLibItems>
-            <linkerOptionItem>-lavformat -lavcodec -lavutil</linkerOptionItem>
+            <linkerOptionItem>-lsdl_gfx -lmingw32 -lSDLmain -lSDL -lSDL_mixer -lSDL_ttf -lSDL_image -lws2_32 </linkerOptionItem>
+            <linkerOptionItem>-lavutil -lavformat -lavcodec -lswscale -lswresample -lavfilter -lswresample</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
       </compileType>

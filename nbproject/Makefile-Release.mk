@@ -21,7 +21,7 @@ FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=MinGW64-Windows
+CND_PLATFORM=MinGW2_64-Windows
 CND_DLIB_EXT=dll
 CND_CONF=Release
 CND_DISTDIR=dist
@@ -35,16 +35,15 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/cmdutils.o \
-	${OBJECTDIR}/ffplay.o
+	${OBJECTDIR}/main.o
 
 
 # C Compiler Flags
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=
-CXXFLAGS=
+CCFLAGS=-fpermissive
+CXXFLAGS=-fpermissive
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -53,7 +52,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -lavformat -lavcodec -lavutil
+LDLIBSOPTIONS=-lsdl_gfx -lmingw32 -lSDLmain -lSDL -lSDL_mixer -lSDL_ttf -lSDL_image -lws2_32 -lavutil -lavformat -lavcodec -lswscale -lswresample -lavfilter -lswresample
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -61,17 +60,12 @@ LDLIBSOPTIONS=-L../../ExternalLibs/ffmpeg/lib -lavformat -lavcodec -lavutil
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videojaw ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/cmdutils.o: cmdutils.c
+${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -I../../ExternalLibs/ffmpeg/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/cmdutils.o cmdutils.c
-
-${OBJECTDIR}/ffplay.o: ffplay.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -O2 -I../../ExternalLibs/ffmpeg/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ffplay.o ffplay.c
+	$(COMPILE.cc) -O3 -w -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

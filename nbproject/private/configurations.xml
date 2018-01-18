@@ -56,6 +56,8 @@
         <gdb_interceptlist>
           <gdbinterceptoptions gdb_all="false" gdb_unhandled="true" gdb_unexpected="true"/>
         </gdb_interceptlist>
+        <gdb_signals>
+        </gdb_signals>
         <gdb_options>
           <DebugOptions>
           </DebugOptions>
@@ -68,12 +70,19 @@
       <runprofile version="9">
         <runcommandpicklist>
           <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Descargas\Clip_480_5sec_6mbps_h264.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" D:\Mula\GOPRO\Camino_Santiago_2017\Vids\GOPR0176.MP4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_480_5sec_6mbps_h264.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_480i_5sec_6mbps_new.mpg C:\clips\reprocesado.mp4.</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_480i_5sec_6mbps_new.mpg C:\clips\reprocesado.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\winsatencode.wmv C:\clips\winsatencode.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_1080_5sec_VC1_15mbps.wmv C:\clips\Clip_1080_5sec_VC1_15mbps.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\winsat.wmv C:\clips\winsatencode.mp4</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}"</runcommand>
+        <runcommand>"${OUTPUT_PATH}" C:\clips\winsat.wmv C:\clips\winsatencode.mp4</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
-        <console-type>1</console-type>
-        <terminal-type>0</terminal-type>
+        <terminal-type>1</terminal-type>
         <remove-instrumentation>0</remove-instrumentation>
         <environment>
         </environment>

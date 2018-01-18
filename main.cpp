@@ -40,6 +40,7 @@ char buffErrors[AV_ERROR_MAX_STRING_SIZE];
 
 struct SwsContext *sws_ctx = NULL;
 struct SwsContext *sws_ctx2 = NULL;
+static int nframe = 0;
 
 AVPacket packet; 
 
@@ -207,12 +208,12 @@ static int open_output_file(const char *filename)
             
             //Encoding to the guessed format 
             if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){
-                //encoder = avcodec_find_encoder(ofmt_ctx->oformat->video_codec);
-                encoder = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+                encoder = avcodec_find_encoder(ofmt_ctx->oformat->video_codec);
+                //encoder = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
                 
             } else if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
-                //encoder = avcodec_find_encoder(ofmt_ctx->oformat->audio_codec);
-                encoder = avcodec_find_encoder(AV_CODEC_ID_MP3);
+                encoder = avcodec_find_encoder(ofmt_ctx->oformat->audio_codec);
+                //encoder = avcodec_find_encoder(AV_CODEC_ID_MP3);
             }
             
             if (!encoder) {
@@ -569,91 +570,40 @@ static int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, in
     return ret;
 }
 
-
-
-Uint32 getpixel(SDL_Surface *surface, const int x, const int y)
-{
-    //int bpp = surface->format->BytesPerPixel;
-    /* Here p is the address to the pixel we want to retrieve */
-    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * surface->format->BytesPerPixel;
-
-    switch(surface->format->BytesPerPixel) {
-    case 1:
-        return *p;
-
-    case 2:
-        return *(Uint16 *)p;
-
-    case 3:
-        if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            return p[0] << 16 | p[1] << 8 | p[2];
-        else
-            return p[0] | p[1] << 8 | p[2] << 16;
-
-    case 4:
-        return *(Uint32 *)p;
-
-    default:
-        return 0;       /* shouldn't happen, but avoids warnings */
-    }
-}
-
-void putpixel(SDL_Surface *surface, const int x, const int y, const Uint32 pixel)
-{
-     //Draw_Pixel(surface, x,y, pixel);
-    int bpp = surface->format->BytesPerPixel;
-    /* Here p is the address to the pixel we want to set */
-    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * surface->format->BytesPerPixel;
-
-    switch(surface->format->BytesPerPixel) {
-    case 1:
-        *p = pixel;
-        break;
-
-    case 2:
-        *(Uint16 *)p = pixel;
-        break;
-
-    case 3:
-        if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-            p[0] = (pixel >> 16) & 0xff;
-            p[1] = (pixel >> 8) & 0xff;
-            p[2] = pixel & 0xff;
-        } else {
-            p[0] = pixel & 0xff;
-            p[1] = (pixel >> 8) & 0xff;
-            p[2] = (pixel >> 16) & 0xff;
-        }
-        break;
-
-    case 4:
-        *(Uint32 *)p = pixel;
-        break;
-    }
+/**
+ * This method does the modifications to each frame
+ * 
+ * @param sf
+ */
+void processFrameInSDL(SDL_Surface *sf){
+    int width = sf->w;
+    int height = sf->h;
+    
+    SDL_Rect location = {width / 2 - 60 / 2, height / 2 - 60 / 2, 60, 60};
+    SDL_FillRect(sf, &location, SDL_MapRGB(sf->format, 255,0,0));
 }
 
 /**
+ * This method converts a YUV or other format frame to a RGB array. Then converts
+ * the rgb array into a SDL_Surface to work with each individual frame in SDL.
  * 
  * @param filt_frame
  * @param stream_index
  */
-void modifFrame(AVFrame *filt_frame, unsigned int stream_index){
+void encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_index){
 #define FRAMEMODIF 0       
 #ifdef FRAMEMODIF 
-        static int nframe = 0;
-        /**Caso 1*/
-        //if (packet.flags & AV_PKT_FLAG_KEY){
-//        if (ifmt_ctx->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
-        if(1){
+        if (ifmt_ctx->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
             int width = filt_frame->width;
             int height = filt_frame->height;
+            const int totalPix = width * height;
             
             uint8_t* rgb_data[4];  
             int rgb_linesize[4];
-
             //Especificamos el formato y tamanyo de la imagen origen y tambien la de destino
-            sws_ctx = sws_getCachedContext(sws_ctx, width, height, filt_frame->format , width, height, 
-                    AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+            sws_ctx = sws_getCachedContext(sws_ctx, width, height, 
+                                            filt_frame->format , width, height, 
+                                            AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
             //Hacemos espacio para la imagen de destino que modificaremos
             av_image_alloc(rgb_data, rgb_linesize, width, height, AV_PIX_FMT_RGB24, 32); 
             //Escalamos la imagen en el destino
@@ -662,43 +612,37 @@ void modifFrame(AVFrame *filt_frame, unsigned int stream_index){
 //            size_t rgb_size = width * height * 3;
 //            uint8_t *rgb_arr = new uint8_t[rgb_size];
 //            std::copy_n(rgb_data[0], rgb_size, rgb_arr);
-            //Do something with the image
-//            SDL_Surface* surf = SDL_CreateRGBSurfaceFrom((uint8_t *)rgb_arr, width, height, 24, width*3,
-//                                                 rmask, gmask, bmask, 0);
+            SDL_Surface* mySurface = SDL_CreateRGBSurfaceFrom((uint8_t *)rgb_data[0], width, height, 24, width*3,
+                                                 rmask, gmask, bmask, 0);
             
-//            if (surf == NULL) {
-//                av_log(NULL, AV_LOG_INFO, "Creating surface failed %s\n", SDL_GetError());
-//                return;
-//            } 
+            if (mySurface == NULL) {
+                av_log(NULL, AV_LOG_INFO, "Creating surface failed %s\n", SDL_GetError());
+                return;
+            } 
             
-            SDL_Surface* mySurface = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 24, rmask, gmask, bmask, 0);
-            av_log(NULL, AV_LOG_INFO, "nframe %d, width %d, height %d, surf->format %d\n", nframe, width, height, mySurface->format);
+            //Alternative for SDL_CreateRGBSurfaceFrom
+//            SDL_Surface* mySurface = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 24, rmask, gmask, bmask, 0);
+//            av_log(NULL, AV_LOG_INFO, "nframe %d, width %d, height %d, surf->format %d\n", nframe, width, height, mySurface->format);
+//            for (int i=0; i < width * height; i++){
+//                Uint8 *p=(Uint8 *)rgb_data[0] + i*3;
+//                ((Uint8 *)mySurface->pixels)[i*3] = p[0]; //r
+//                ((Uint8 *)mySurface->pixels)[i*3+1] = p[1]; //g
+//                ((Uint8 *)mySurface->pixels)[i*3+2] = p[2]; //b
+//            }
             
+            //Do the SDL modifications
+            processFrameInSDL(mySurface);
             
-            for (int i=0; i < width * height; i++){
-                Uint8 *p=(Uint8 *)rgb_data[0] + i*3;
-                ((Uint8 *)mySurface->pixels)[i*3] = p[0]; //r
-                ((Uint8 *)mySurface->pixels)[i*3+1] = p[1]; //g
-                ((Uint8 *)mySurface->pixels)[i*3+2] = p[2]; //b
-            }
-            
-            
-//            SDL_Surface* mySurface;// = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 24, rmask, gmask, bmask, 0);
-//            mySurface = SDL_DisplayFormatAlpha(surf);
-            
-            SDL_Rect location = {width / 2 - 60 / 2, height / 2 - 60 / 2, 60, 60};
-            SDL_FillRect(mySurface, &location, SDL_MapRGB(mySurface->format, 255,0,0));
-            
-//            SDL_FreeSurface(surf);
-
+            //Code to export the images in bmp  
 //            if (nframe == 10){
-                string filename = "C:\\clips\\bmp\\ejemplo_" + std::to_string(nframe) + "_" + std::to_string(filt_frame->pict_type) + ".bmp";
-                if (SDL_SaveBMP(mySurface, filename.c_str()) != 0){
-                    av_log(NULL, AV_LOG_INFO, "Save bitmap failed %s\n", SDL_GetError());
-                }
+//                string filename = "C:\\clips\\bmp\\ejemplo_" + std::to_string(nframe) + "_" + std::to_string(filt_frame->pict_type) + ".bmp";
+//                if (SDL_SaveBMP(mySurface, filename.c_str()) != 0){
+//                    av_log(NULL, AV_LOG_INFO, "Save bitmap failed %s\n", SDL_GetError());
+//                }
 //            }
 //            Uint8 r,g,b;
-            Uint8 *p;
+            Uint8 *p = NULL;
+            
 //            for (int y=0; y < height; y++){
 //                for (int x=0; x < width; x++){
 //                    //p=(Uint8 *)mySurface->pixels + y * mySurface->pitch + x * mySurface->format->BytesPerPixel;
@@ -710,83 +654,47 @@ void modifFrame(AVFrame *filt_frame, unsigned int stream_index){
 //            }
                 
             SDL_LockSurface(mySurface);
-            for (int i=0; i < width * height; i++){
+            for (int i=0; i < totalPix; i++){
                 p=(Uint8 *)mySurface->pixels + i*3;
                 rgb_data[0][i*3] = p[0]; //r
                 rgb_data[0][i*3+1] = p[1]; //g
                 rgb_data[0][i*3+2] = p[2]; //b
             }
-
-            //Volvemos a copiar la imagen modificada en el frame de destino
-            //std::copy_n(rgb_arr, rgb_size, rgb_data[0]);
-            sws_ctx2 = sws_getCachedContext(sws_ctx2, width, height, AV_PIX_FMT_RGB24, width, height, filt_frame->format, SWS_BICUBIC, NULL, NULL, NULL);
-            sws_scale(sws_ctx2, &rgb_data[0], rgb_linesize, 0, height, filt_frame->data, filt_frame->linesize);
             SDL_UnlockSurface(mySurface);
             SDL_FreeSurface( mySurface );
-            nframe++;
+            
+            AVFrame *frameMod = av_frame_alloc();
+            frameMod->format = filt_frame->format;
+            frameMod->width = filt_frame->width;
+            frameMod->height = filt_frame->height;
+            frameMod->channels = filt_frame->channels;
+            frameMod->channel_layout = filt_frame->channel_layout;
+            frameMod->nb_samples = filt_frame->nb_samples;
+            
+            av_frame_get_buffer(frameMod, 32);
+            if (av_frame_copy(frameMod, filt_frame) < 0 ){
+                av_log(NULL, AV_LOG_INFO, "Copy to new frame failed\n");
+                return;
+            }
+            av_frame_copy_props(frameMod, filt_frame);
+            
+            //Volvemos a copiar la imagen modificada en el frame de destino
+            //std::copy_n(rgb_arr, rgb_size, rgb_data[0]);
+            sws_ctx2 = sws_getCachedContext(sws_ctx2, width, height, AV_PIX_FMT_RGB24, width, height, frameMod->format, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+            sws_scale(sws_ctx2, &rgb_data[0], rgb_linesize, 0, height, frameMod->data, frameMod->linesize);
+            av_freep(&rgb_data[0]);
+            
+            //Liberamos el frame filtrado para volver a copiar el contenido del frame modificado
+            av_frame_free(&filt_frame);
+            filt_frame = av_frame_clone(frameMod);
+            if (av_frame_copy(filt_frame, frameMod) < 0 ){
+                av_log(NULL, AV_LOG_INFO, "Copy to final frame failed\n");
+                return;
+            }
+            av_frame_free(&frameMod);
 //            delete rgb_arr;
         }        
 #endif     
-}
-
-static void ffmpeg_encoder_set_frame_yuv_from_rgb(AVFrame *frame, unsigned int stream_index, uint8_t *rgb) {
-    
-    if (ifmt_ctx->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
-        const int in_linesize[1] = { 3 * stream_ctx[stream_index].dec_ctx->width };
-        sws_ctx2 = sws_getCachedContext(sws_ctx2,
-            stream_ctx[stream_index].dec_ctx->width, stream_ctx[stream_index].dec_ctx->height, AV_PIX_FMT_RGB24,
-            stream_ctx[stream_index].dec_ctx->width, stream_ctx[stream_index].dec_ctx->height, AV_PIX_FMT_YUV420P,
-            0, 0, 0, 0);
-        sws_scale(sws_ctx2, (const uint8_t * const *)&rgb, in_linesize, 0,
-        stream_ctx[stream_index].dec_ctx->height, frame->data, frame->linesize);
-    }
-}
-
-uint8_t* generate_rgb(AVFrame *frame, int width, int height, int pts, uint8_t *rgb) {
-    int x, y, cur;
-    rgb = realloc(rgb, 3 * sizeof(uint8_t) * height * width);
-    for (y = 0; y < height; y++) {
-        for (x = 0; x < width; x++) {
-            cur = 3 * (y * width + x);
-            rgb[cur + 0] = 0;
-            rgb[cur + 1] = 0;
-            rgb[cur + 2] = 0;
-            if ((frame->pts / 25) % 2 == 0) {
-                if (y < height / 2) {
-                    if (x < width / 2) {
-                        /* Black. */
-                    } else {
-                        rgb[cur + 0] = 255;
-                    }
-                } else {
-                    if (x < width / 2) {
-                        rgb[cur + 1] = 255;
-                    } else {
-                        rgb[cur + 2] = 255;
-                    }
-                }
-            } else {
-                if (y < height / 2) {
-                    rgb[cur + 0] = 255;
-                    if (x < width / 2) {
-                        rgb[cur + 1] = 255;
-                    } else {
-                        rgb[cur + 2] = 255;
-                    }
-                } else {
-                    if (x < width / 2) {
-                        rgb[cur + 1] = 255;
-                        rgb[cur + 2] = 255;
-                    } else {
-                        rgb[cur + 0] = 255;
-                        rgb[cur + 1] = 255;
-                        rgb[cur + 2] = 255;
-                    }
-                }
-            }
-        }
-    }
-    return rgb;
 }
 
 /**
@@ -836,11 +744,8 @@ static int filter_encode_write_frame(AVFrame *frame, unsigned int stream_index)
         } 
 
         //Do something with the image
-        av_log(NULL, AV_LOG_INFO, "filt_frame->pict_type %d\n", filt_frame->pict_type);
-//        if (filt_frame->pict_type == AV_PICTURE_TYPE_P || filt_frame->pict_type == AV_PICTURE_TYPE_I){
-//        if (filt_frame->pict_type == AV_PICTURE_TYPE_I){
-            modifFrame(filt_frame, stream_index);
-//        }
+        //av_log(NULL, AV_LOG_INFO, "filt_frame->pict_type %d\n", filt_frame->pict_type);
+        encodeFrameToRGB(filt_frame, stream_index);
         
         filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
         ret = encode_write_frame(filt_frame, stream_index, NULL);
@@ -911,7 +816,8 @@ int main(int argc, char **argv)
         goto end;
     if ((ret = init_filters()) < 0)
         goto end;
-
+    
+    nframe = 0;
     /* read all packets */
     while (1) {
         SDL_Event event;
@@ -987,14 +893,10 @@ int main(int argc, char **argv)
 #endif
 
             if (got_frame) {
-                
-//        if (filt_frame->pict_type == AV_PICTURE_TYPE_P || filt_frame->pict_type == AV_PICTURE_TYPE_I){
-//            modifFrame(frame, stream_index);
-//        }
-                
                 frame->pts = frame->best_effort_timestamp;
                 ret = filter_encode_write_frame(frame, stream_index);
                 av_frame_free(&frame);
+                nframe++;
                 if (ret < 0)
                     goto end;
             } else {

@@ -15,13 +15,13 @@ CND_PACKAGE_DIR_Debug=dist/Debug/MinGW2_64-Windows/package
 CND_PACKAGE_NAME_Debug=videojaw.tar
 CND_PACKAGE_PATH_Debug=dist/Debug/MinGW2_64-Windows/package/videojaw.tar
 # Release configuration
-CND_PLATFORM_Release=MinGW64-Windows
-CND_ARTIFACT_DIR_Release=dist/Release/MinGW64-Windows
+CND_PLATFORM_Release=MinGW2_64-Windows
+CND_ARTIFACT_DIR_Release=dist/Release/MinGW2_64-Windows
 CND_ARTIFACT_NAME_Release=videojaw
-CND_ARTIFACT_PATH_Release=dist/Release/MinGW64-Windows/videojaw
-CND_PACKAGE_DIR_Release=dist/Release/MinGW64-Windows/package
+CND_ARTIFACT_PATH_Release=dist/Release/MinGW2_64-Windows/videojaw
+CND_PACKAGE_DIR_Release=dist/Release/MinGW2_64-Windows/package
 CND_PACKAGE_NAME_Release=videojaw.tar
-CND_PACKAGE_PATH_Release=dist/Release/MinGW64-Windows/package/videojaw.tar
+CND_PACKAGE_PATH_Release=dist/Release/MinGW2_64-Windows/package/videojaw.tar
 #
 # include compiler specific variables
 #
