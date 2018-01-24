@@ -26,7 +26,6 @@
       </nativedebugger>
       <runprofile version="9">
         <runcommandpicklist>
-          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\winsatencode.wmv C:\clips\winsatencode.mp4</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\Clip_1080_5sec_VC1_15mbps.wmv C:\clips\Clip_1080_5sec_VC1_15mbps.mp4</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\winsat.wmv C:\clips\winsatencode.mp4</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" SampleVideo_1280x720_5mb.mp4 C:\clips\winsatencode.mp4</runcommandpicklistitem>
@@ -36,8 +35,9 @@
           <runcommandpicklistitem>"${OUTPUT_PATH}" C:\Clips\winsat.wmv C:\clips\output.wmv</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" C:\Clips\winsat.wmv C:\clips\output.mp4</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" C:\Clips\output.mp4 C:\clips\output2.mp4</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" C:\clips\SampleVideo_720x480_5mb.mp4 C:\clips\output2.mp4</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}" C:\Clips\output.mp4 C:\clips\output2.mp4</runcommand>
+        <runcommand>"${OUTPUT_PATH}" C:\clips\SampleVideo_720x480_5mb.mp4 C:\clips\output2.mp4</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
         <terminal-type>1</terminal-type>

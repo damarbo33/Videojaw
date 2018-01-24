@@ -14,11 +14,9 @@
 #include "VideoTranscoder.h"
 #include <inttypes.h>
 
+
 VideoTranscoder::VideoTranscoder() {
-    nframe = 0;
-    sws_ctx = NULL;
-    sws_ctx2 = NULL;
-    stream_ctx = NULL;
+    clean();
 }
 
 VideoTranscoder::VideoTranscoder(const VideoTranscoder& orig) {
@@ -29,13 +27,23 @@ VideoTranscoder::~VideoTranscoder() {
     
 }
 
+void VideoTranscoder::clean(){
+    nframe = 0;
+    sws_ctx = NULL;
+    sws_ctx2 = NULL;
+    stream_ctx = NULL;
+}
+
+
 /**
+ * Reencode a list of files to a unic file with all the videos in a concatenated
+ * way.
  * 
- * @param inputFile
- * @param outputFile
+ * @param files
+ * @param refFile
  * @return 
  */
-int VideoTranscoder::remux(string inputFile, string outputFile){
+int VideoTranscoder::transcodeList(vector<string> *files, int refFile){
     int ret = 0;
     AVPacket packet; 
     packet.data = NULL;
@@ -43,14 +51,214 @@ int VideoTranscoder::remux(string inputFile, string outputFile){
     AVFrame *frame = NULL;
     unsigned int stream_index;
     unsigned int i;
+    int got_frame;
     
-    if (inputFile.empty() || outputFile.empty()) {
+    clean();
+    av_register_all();
+    avfilter_register_all();
+
+    string inputFile, outputFile;
+    
+    StreamContext *stream_ref_ctx = NULL;
+    AVCodecParameters *parmsRef = NULL;
+    
+    if (files->size() < refFile){
+        return 1;
+    } else {
+        inputFile = files->at(refFile);
+        outputFile = files->at(files->size()-1);
+        
+        if ((ret = open_input_file(inputFile.c_str())) < 0)
+            return closeResources(&packet, frame, ret);
+        if ((ret = open_output_file(outputFile.c_str(), stream_ref_ctx)) < 0)
+            return closeResources(&packet, frame, ret);
+        if ((ret = init_filters()) < 0)
+            return closeResources(&packet, frame, ret);
+        
+        if (stream_ref_ctx == NULL)
+        stream_ref_ctx = (StreamContext*) av_mallocz_array(ifmt_ctx->nb_streams, sizeof(*stream_ref_ctx));
+    
+        if (!stream_ref_ctx)
+        return AVERROR(ENOMEM);
+        
+        //Copiamos los parametros de video del fichero especificado por la posicion 
+        //de la lista enviada
+        for (i = 0; i < ifmt_ctx->nb_streams; i++) {
+            parmsRef = avcodec_parameters_alloc();
+            stream_ref_ctx[i].dec_ctx = avcodec_alloc_context3(stream_ctx[i].dec_ctx->codec);
+            avcodec_parameters_from_context(parmsRef, stream_ctx[i].dec_ctx);
+            avcodec_parameters_to_context(stream_ref_ctx[i].dec_ctx, parmsRef);
+            //Framerate must be copied manually
+            if (stream_ctx[i].dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){
+                stream_ref_ctx[i].dec_ctx->framerate = stream_ctx[i].dec_ctx->framerate;
+                stream_ref_ctx[i].dec_ctx->time_base = stream_ctx[i].dec_ctx->time_base;
+            }
+            avcodec_parameters_free(&parmsRef);
+        }
+        avformat_close_input(&ifmt_ctx);    
+    }
+   
+//    for (int fileCount=0; fileCount < files->size()-1; fileCount++){
+    inputFile = files->at(1);
+
+    if ((ret = open_input_file(inputFile.c_str())) < 0)
+        return closeResources(&packet, frame, ret);
+
+    nframe = 0;
+    //We define wich is the function to modify the frame
+    sdlProcessing=VideoTranscoder::processFrameInSDL;
+
+    /* read all packets */
+    while (1) {
+        SDL_Event event;
+        if( SDL_PollEvent( &event ) ){
+            SDL_Delay(1);
+        }
+
+        if ((ret = av_read_frame(ifmt_ctx, &packet)) < 0){
+            break;
+        }
+        stream_index = packet.stream_index;
+
+        av_log(NULL, AV_LOG_DEBUG, "Demuxer gave frame of stream_index %u\n",
+                stream_index);
+
+        if (filter_ctx[stream_index].filter_graph) {
+            av_log(NULL, AV_LOG_INFO, "Going to reencode&filter the frame: %d\n", nframe);
+            frame = av_frame_alloc();
+            if (!frame) {
+                ret = AVERROR(ENOMEM);
+                break;
+            }
+            av_packet_rescale_ts(&packet,
+                                 ifmt_ctx->streams[stream_index]->time_base,
+                                 stream_ctx[stream_index].dec_ctx->time_base);
+
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 48, 0)  
+            enum AVMediaType type = ifmt_ctx->streams[packet.stream_index]->codecpar->codec_type;
+            int (*dec_func)(AVCodecContext *, AVFrame *, int *, const AVPacket *);
+            dec_func = (type == AVMEDIA_TYPE_VIDEO) ? avcodec_decode_video2 :
+                avcodec_decode_audio4;
+
+            ret = dec_func(stream_ctx[stream_index].dec_ctx, frame,
+                    &got_frame, &packet);
+            if (ret < 0) {
+                av_frame_free(&frame);
+                av_log(NULL, AV_LOG_ERROR, "Decoding failed\n");
+                break;
+            }
+#else
+            int ret;
+            // AVERROR(EAGAIN) means that we need to feed more
+            // That we can decode Frame or Packet
+            do {
+                do {
+                    ret = avcodec_send_packet(stream_ctx[stream_index].dec_ctx, &packet);
+                } while(ret == AVERROR(EAGAIN));
+
+
+                ret = avcodec_receive_frame(stream_ctx[stream_index].dec_ctx, frame);
+
+                if(ret == AVERROR_EOF || ret == AVERROR(EINVAL)) {
+                    printf("AVERROR(EAGAIN): %d, AVERROR_EOF: %d, AVERROR(EINVAL): %d\n", AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL));
+                    printf("fe_read_frame: Frame getting error (%d)!\n", ret);
+                    return ret;
+                } else if (ret == 0){
+                    got_frame = 1;
+                }
+            } while(ret == AVERROR(EAGAIN));
+
+            if(ret == AVERROR_EOF){
+                got_frame = 0;
+            }
+
+            if(ret == AVERROR(EINVAL)) {
+                // An error or EOF occured,index break out and return what
+                // we have so far.
+                fprintf(stderr, "Could not decode frame (error '%s')\n",
+                av_cplus_err2str(ret));
+                av_packet_unref(&packet);
+                return ret;
+            }
+#endif
+
+            if (got_frame) {
+                frame->pts = frame->best_effort_timestamp;
+                if (nframe == 50){
+                    sdlProcessing=VideoTranscoder::processFrameInSDL2;
+                }
+                ret = filter_encode_write_frame(frame, stream_index);
+                av_frame_free(&frame);
+                if (ret < 0)
+                    return closeResources(&packet, frame, ret);
+            } else {
+                av_frame_free(&frame);
+            }
+
+            nframe++;
+        } else {
+            av_log(NULL, AV_LOG_INFO, "remux this frame without reencoding: %d\n",nframe);
+            /* remux this frame without reencoding */
+            av_packet_rescale_ts(&packet,
+                                 ifmt_ctx->streams[stream_index]->time_base,
+                                 ofmt_ctx->streams[stream_index]->time_base);
+
+            ret = av_interleaved_write_frame(ofmt_ctx, &packet);
+            if (ret < 0)
+                return closeResources(&packet, frame, ret);
+        }
+        av_packet_unref(&packet);
+    }
+    
+    av_log(NULL, AV_LOG_INFO, "Liberando filtros\n");
+    /* flush filters and encoders */
+    for (i = 0; i < ifmt_ctx->nb_streams; i++) {
+        /* flush filter */
+        if (!filter_ctx[i].filter_graph)
+            continue;
+        ret = filter_encode_write_frame(NULL, i);
+        if (ret < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Flushing filter failed\n");
+            return closeResources(&packet, frame, ret);
+        }
+
+        /* flush encoder */
+        ret = flush_encoder(i);
+        if (ret < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Flushing encoder failed\n");
+            return closeResources(&packet, frame, ret);
+        }
+    }
+    av_write_trailer(ofmt_ctx);
+    
+    return closeResources(&packet, frame, ret);
+}
+
+/**
+ * 
+ * @param inFiles
+ * @param outputFile
+ * @return 
+ */
+int VideoTranscoder::remux(vector<string> *inFiles, string outputFile){
+    int ret = 0;
+    AVPacket packet; 
+    packet.data = NULL;
+    packet.size = 0;
+    AVFrame *frame = NULL;
+    unsigned int stream_index;
+    unsigned int i;
+    clean();
+    
+    if (inFiles->size() <= 0 || outputFile.empty()) {
         av_log(NULL, AV_LOG_ERROR, "output or input files not especified\n");
         return 1;
     }
     
     av_register_all();
     avfilter_register_all();
+    
+    string inputFile = inFiles->at(0);
 
     if ((ret = open_input_file(inputFile.c_str())) < 0)
         return closeResources(&packet, frame, ret);
@@ -65,13 +273,12 @@ int VideoTranscoder::remux(string inputFile, string outputFile){
     int tmp_pts = 0;
     int last_dts = 0;
     int last_pts = 0;
-    int loopsVideo = 2;
     int offsetDts = 0;
     int offsetPts = 0;
-    char args[512];
+//    char args[512];
 
     /* read all packets */
-    for (int cont = 0; cont < loopsVideo; cont++){
+    for (int cont = 0; cont < inFiles->size(); cont++){
         offsetDts = 0;
         offsetPts = 0;
     
@@ -130,39 +337,49 @@ int VideoTranscoder::remux(string inputFile, string outputFile){
             av_packet_unref(&packet);
         }
         
-        //We reopen the input files
-        if (cont < loopsVideo - 1){
+        //We reopen the input files and avoid closing the last video
+        if (cont < inFiles->size() - 1){
+            av_log(NULL, AV_LOG_INFO, "Closing video input %s\n", inputFile.c_str());
             avformat_close_input(&ifmt_ctx);
+            inputFile = inFiles->at(cont+1);
+            av_log(NULL, AV_LOG_INFO, "Opening video input %s\n", inputFile.c_str());
             if ((ret = open_input_file(inputFile.c_str())) < 0)
             return closeResources(&packet, frame, ret);
         }
     }
-        
+    
+    av_log(NULL, AV_LOG_INFO, "Flushing filters\n");
     /* flush filters and encoders */
     for (i = 0; i < ifmt_ctx->nb_streams; i++) {
         /* flush filter */
         if (!filter_ctx[i].filter_graph)
             continue;
         ret = filter_encode_write_frame(NULL, i);
+        av_log(NULL, AV_LOG_INFO, "Flushing filter\n");
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Flushing filter failed\n");
             return closeResources(&packet, frame, ret);
         }
-
+        
         /* flush encoder */
+        av_log(NULL, AV_LOG_INFO, "Flushing encoder\n");
         ret = flush_encoder(i);
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Flushing encoder failed\n");
             return closeResources(&packet, frame, ret);
         }
+        av_log(NULL, AV_LOG_INFO, "Stream flushed\n");
     }
+    av_log(NULL, AV_LOG_INFO, "Writing trailer\n");
     av_write_trailer(ofmt_ctx);
-    
+    av_log(NULL, AV_LOG_INFO, "Closing resources\n");
     return closeResources(&packet, frame, ret);
 }
 
 
 /**
+ * Reencode a file of one format to a file of different format but mantaining 
+ * size, fps...
  * 
  * @param inputFile
  * @param outputFile
@@ -321,6 +538,13 @@ int VideoTranscoder::transcode(string inputFile, string outputFile){
     return closeResources(&packet, frame, ret);
 }
 
+/**
+ * 
+ * @param packet
+ * @param frame
+ * @param ret
+ * @return 
+ */
 int VideoTranscoder::closeResources(AVPacket *packet, AVFrame *frame, int ret){
     av_packet_unref(packet);
     av_frame_free(&frame);
@@ -455,7 +679,7 @@ int VideoTranscoder::open_input_file(const char *filename)
  * @param filename
  * @return 
  */
-int VideoTranscoder::open_output_file(const char *filename)
+int VideoTranscoder::open_output_file(const char *filename, StreamContext *stream_ref_ctx)
 {
     AVStream *out_stream;
     AVStream *in_stream;
@@ -490,7 +714,12 @@ int VideoTranscoder::open_output_file(const char *filename)
         }
 
         in_stream = ifmt_ctx->streams[i];
-        dec_ctx = stream_ctx[i].dec_ctx;
+        if (stream_ref_ctx != NULL){
+            dec_ctx = stream_ref_ctx[i].dec_ctx;
+        } else {
+            dec_ctx = stream_ctx[i].dec_ctx;
+        }
+        
 
         if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO
                 || dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -781,7 +1010,6 @@ int VideoTranscoder::init_filters(void)
                 || ifmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO))
             continue;
 
-
         if (ifmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
             filter_spec = "null"; /* passthrough (dummy) filter for video */
         else
@@ -900,7 +1128,8 @@ void VideoTranscoder::encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_
             int srcHeight = stream_ctx[stream_index].dec_ctx->height;
             int dstWidth = stream_ctx[stream_index].enc_ctx->width;
             int dstHeight = stream_ctx[stream_index].enc_ctx->height;
-            const int totalPix = srcWidth * srcHeight;
+            //totalPix is used to iterate through pixelarray in the alternative copy pixel code
+            //const int totalPix = dstWidth * dstHeight;
             
             uint8_t* rgb_data[4];  
             int rgb_linesize[4];
@@ -949,8 +1178,12 @@ void VideoTranscoder::encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_
 //                }
 //            }
 //            Uint8 r,g,b;
-            Uint8 *p = NULL;
-            
+            //This is needed if we manually copy each pixel like in commented example above.
+            //The example is commented because SDL_CreateRGBSurfaceFrom makes a reference copy
+            //of the rgb_data in a new SDL_Surface named mySurface->pixels. I include 2 examples to
+            //do the same copy
+            //---EXAMPLE 1---
+//            Uint8 *p = NULL;
 //            for (int y=0; y < height; y++){
 //                for (int x=0; x < width; x++){
 //                    //p=(Uint8 *)mySurface->pixels + y * mySurface->pitch + x * mySurface->format->BytesPerPixel;
@@ -960,16 +1193,16 @@ void VideoTranscoder::encodeFrameToRGB(AVFrame *filt_frame, unsigned int stream_
 //                   rgb_data[0][(y*width + x)*3 + 2] = b; //p[2]; //b
 //                }
 //            }
-                
-            SDL_LockSurface(mySurface);
-            for (int i=0; i < totalPix; i++){
-                p=(Uint8 *)mySurface->pixels + i*3;
-                rgb_data[0][i*3] = p[0]; //r
-                rgb_data[0][i*3+1] = p[1]; //g
-                rgb_data[0][i*3+2] = p[2]; //b
-            }
-            SDL_UnlockSurface(mySurface);
-            SDL_FreeSurface( mySurface );
+              //---EXAMPLE 2--- 
+//            SDL_LockSurface(mySurface);
+//            for (int i=0; i < totalPix; i++){
+//                p=(Uint8 *)mySurface->pixels + i*3;
+//                rgb_data[0][i*3] = p[0]; //r
+//                rgb_data[0][i*3+1] = p[1]; //g
+//                rgb_data[0][i*3+2] = p[2]; //b
+//            }
+//            SDL_UnlockSurface(mySurface);
+//            SDL_FreeSurface( mySurface );
             
             AVFrame *frameMod = av_frame_alloc();
             frameMod->format = filt_frame->format;

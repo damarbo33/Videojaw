@@ -38,11 +38,11 @@
       </toolsSet>
       <compileType>
         <cTool>
-          <warningLevel>2</warningLevel>
+          <warningLevel>0</warningLevel>
         </cTool>
         <ccTool>
           <commandLine>-fpermissive</commandLine>
-          <warningLevel>2</warningLevel>
+          <warningLevel>0</warningLevel>
         </ccTool>
         <linkerTool>
           <linkerLibItems>

@@ -30,8 +30,29 @@ int main(int argc, char **argv)
     }
     
     VideoTranscoder *trans = new VideoTranscoder();
-    //trans->transcode(argv[1], argv[2]);
-    trans->remux(argv[1], argv[2]);
+//    trans->transcode(argv[1], argv[2]);
+    //trans->remux(argv[1], argv[2]);
+    vector<string> *lista = new vector<string>();
+    vector<string> *lista2 = new vector<string>();
+    vector<string> *lista3 = new vector<string>();
+    
+//    lista->push_back("C:\\clips\\SampleVideo_720x480_5mb.mp4"); //Reference of format 640x480
+//    lista->push_back("C:\\clips\\SampleVideo_1280x720_5mb.mp4"); //Video to recompress
+//    lista->push_back("C:\\clips\\resampled.mp4");
+//    trans->transcodeList(lista,0);
+//    
+//    lista2->push_back("C:\\clips\\SampleVideo_720x480_5mb.mp4"); //Reference of format 640x480
+//    lista2->push_back("C:\\clips\\Clip_1080_5sec_MPEG2_HD_15mbps.mpg"); //Video to recompress
+//    lista2->push_back("C:\\clips\\resampled2.mp4");
+//    trans->transcodeList(lista2,0);
+    
+    lista3->push_back("C:\\clips\\resampled.mp4"); //Video resampled to join
+    lista3->push_back("C:\\clips\\resampled2.mp4"); //Video resampled to join
+    trans->remux(lista3, "C:\\clips\\outjoined.mp4");
+    
+    delete lista;
+    delete lista2;
+    delete lista3;
     delete trans;
     
     return ret ? 1 : 0;

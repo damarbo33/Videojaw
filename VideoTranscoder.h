@@ -21,6 +21,7 @@
 #include <sstream>
 #include <array>
 #include <algorithm>
+#include <vector>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_image.h>
@@ -63,7 +64,8 @@ public:
     VideoTranscoder(const VideoTranscoder& orig);
     virtual ~VideoTranscoder();
     int transcode(string inputFile, string outputFile);
-    int remux(string inputFile, string outputFile);
+    int remux(vector<string> *inFiles, string outputFile);
+    int transcodeList(vector<string> *files, int refFile);
     
 private:
 
@@ -92,6 +94,7 @@ private:
     } StreamContext;
     StreamContext *stream_ctx;
     
+    void clean();
     int closeResources(AVPacket *packet, AVFrame *frame, int ret);
     int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
         AVCodecContext *enc_ctx, const char *filter_spec);
@@ -105,8 +108,9 @@ private:
     static void processFrameInSDL(SDL_Surface *sf);
     int encode_write_frame(AVFrame *filt_frame, unsigned int stream_index, int *got_frame);
     int init_filters(void);
-    int open_output_file(const char *filename);
+    int open_output_file(const char *filename, StreamContext *stream_ref_ctx = NULL);
     int open_input_file(const char *filename);
+    
     
     
     
